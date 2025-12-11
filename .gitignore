@@ -1,0 +1,68 @@
+# Build directories
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+
+# Executables
+*.exe
+*.out
+search_service
+consumer_service
+ingest_demo
+producer_tool
+bench_tool
+
+# Algorithm executables
+algorithms/cpp/two_sum
+algorithms/cpp/kadane_max_subarray
+algorithms/cpp/dijkstra_shortest_path
+algorithms/cpp/longest_increasing_subsequence
+algorithms/cpp/tree_traversals
+algorithms/cpp/union_find
+algorithms/cpp/trie_autocomplete
+algorithms/cpp/merge_intervals
+algorithms/cpp/longest_substring_no_repeat
+algorithms/cpp/knapsack_01
+algorithms/cpp/coin_change
+algorithms/cpp/top_k_elements
+algorithms/cpp/detect_cycle
+algorithms/cpp/tree_bfs
+algorithms/cpp/lowest_common_ancestor
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+append-log/
+*.jsonl
+
+# Test artifacts
+test-append-log/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Dependencies
+vcpkg_installed/
+_deps/
+
+# Docker volumes
+.docker/
+
+# Temporary files
+*.tmp
+*.bak

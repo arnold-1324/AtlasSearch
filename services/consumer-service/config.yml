@@ -1,0 +1,21 @@
+kafka:
+  brokers: "localhost:9092"
+  group_id: "atlas-product-consumer"
+  topic: "product-events"
+  dlq_topic: "product-dlq"
+
+elasticsearch:
+  host: "localhost"
+  port: 9200
+  index: "products"
+
+redis:
+  host: "localhost"
+  port: 6379
+
+logging:
+  level: "INFO"
+
+metrics:
+  enabled: true
+  port: 9090
