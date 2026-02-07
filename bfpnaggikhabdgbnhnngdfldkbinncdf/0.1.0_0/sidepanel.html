@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>OpenClaw Copilot</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #f5f5f7;
+    }
+
+    /* Views */
+    .view {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .view.active {
+      display: flex;
+    }
+
+    /* Header */
+    header {
+      padding: 10px 15px;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    header.sub-header {
+      justify-content: flex-start;
+      gap: 10px;
+    }
+    h1 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .back-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      color: #007AFF;
+    }
+    .back-btn:hover {
+      background-color: #f0f0f0;
+      border-radius: 4px;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ccc; /* Default gray */
+    }
+    .status-indicator.connected { background-color: #34c759; } /* Green */
+    .status-indicator.disconnected { background-color: #ff3b30; } /* Red */
+    .status-indicator.connecting { background-color: #ff9500; } /* Orange */
+
+    /* Chat Area */
+    #chat-history {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .message {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      position: relative;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background-color: #007AFF;
+      color: white;
+      border-bottom-right-radius: 2px;
+    }
+
+    .message.bot {
+      align-self: flex-start;
+      background-color: #fff;
+      color: #333;
+      border: 1px solid #e0e0e0;
+      border-bottom-left-radius: 2px;
+    }
+    
+    .message.system {
+      align-self: center;
+      background-color: transparent;
+      color: #888;
+      font-size: 12px;
+      border: none;
+      text-align: center;
+    }
+
+    /* Markdown Styles within Bot Messages */
+    .message.bot pre {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 5px 0;
+    }
+    .message.bot code {
+      font-family: 'Menlo', 'Consolas', monospace;
+      font-size: 13px;
+    }
+    .message.bot p {
+      margin: 0 0 8px 0;
+    }
+    .message.bot p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Input Area */
+    #input-area {
+      padding: 15px;
+      background: #fff;
+      border-top: 1px solid #e0e0e0;
+      flex-shrink: 0;
+    }
+    
+    .input-container {
+      display: flex;
+      gap: 10px;
+    }
+
+    textarea {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      resize: none;
+      height: 40px; /* Initial height */
+      font-family: inherit;
+      outline: none;
+    }
+    textarea:focus {
+      border-color: #007AFF;
+    }
+
+    button#send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background-color: #007AFF;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button#send-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    button#settings-btn, button#tutorial-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px;
+        border-radius: 4px;
+        color: #555;
+    }
+    button#settings-btn:hover, button#tutorial-btn:hover {
+        background-color: #f0f0f0;
+        color: #007AFF;
+    }
+
+    /* Context Bar */
+    .context-bar {
+        padding: 8px 15px;
+        background-color: #fff;
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+    }
+    .context-bar.connected { background-color: #f0fff4; }
+    .context-bar.disconnected { background-color: #f9f9f9; }
+    .context-bar.connecting { background-color: #fff8e1; }
+    .context-bar.restricted { background-color: #fff0f0; }
+
+    #tab-status-icon { margin-right: 5px; }
+    #connect-tab-btn {
+        padding: 4px 10px;
+        background-color: #007AFF;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    #connect-tab-btn:disabled {
+        background-color: #ccc;
+        cursor: default;
+    }
+
+    /* Settings & Tutorial Content Styles */
+    .content-container {
+      padding: 20px;
+      background: #fff;
+      flex: 1;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #86868b;
+      margin-bottom: 10px;
+      margin-top: 20px;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    input[type="text"], input[type="password"], input[type="number"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d2d2d7;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+    input:focus {
+      outline: none;
+      border-color: #007AFF;
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.1);
+    }
+    .helper-text {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: #86868b;
+    }
+    .actions {
+      margin-top: 25px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 10px;
+      background: #007AFF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      color: #007AFF;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .status-msg {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      text-align: center;
+      display: none;
+    }
+    .status-msg.success { background: #e8f5e9; color: #2e7d32; }
+    .status-msg.error { background: #ffebee; color: #c62828; }
+
+    /* Tutorial Specific */
+    .step { margin-bottom: 20px; }
+    .step-number {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      background-color: #007AFF;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 24px;
+      font-weight: bold;
+      margin-right: 8px;
+      font-size: 14px;
+    }
+    .step-title { font-weight: bold; font-size: 14px; color: #333; }
+    .tutorial-content p { font-size: 14px; margin: 5px 0 10px 0; }
+    .tutorial-content ul { padding-left: 20px; margin: 5px 0; font-size: 14px; }
+    .tutorial-content li { margin-bottom: 5px; }
+    .note {
+      background-color: #e8f4ff;
+      border-left: 3px solid #007AFF;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+  </style>
+  <script type="module" crossorigin src="/sidepanel.js"></script>
+</head>
+<body>
+
+  <!-- VIEW: CHAT (Default) -->
+  <div id="view-chat" class="view active">
+      <header>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div id="connection-status" class="status-indicator disconnected" title="Disconnected"></div>
+            <h1>OpenClaw</h1>
+        </div>
+        <div style="display: flex; gap: 5px;">
+            <button id="tutorial-btn" title="Tutorial">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </button>
+            <button id="settings-btn" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </div>
+      </header>
+    
+      <!-- Context Bar for Tab Control Status -->
+      <div id="context-bar" class="context-bar disconnected">
+        <span class="status-text">
+            <span id="tab-status-icon">⚪</span> 
+            <span id="tab-status-text">Checking...</span>
+        </span>
+        <button id="connect-tab-btn" style="display: none;">Connect</button>
+      </div>
+    
+      <div id="chat-history">
+        <!-- Messages will be injected here -->
+        <div class="message system">Connecting to OpenClaw...</div>
+      </div>
+    
+      <div id="input-area">
+        <div class="input-container">
+          <textarea id="message-input" placeholder="Type a message... (Shift+Enter for new line)"></textarea>
+          <button id="send-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+  </div>
+
+  <!-- VIEW: SETTINGS -->
+  <div id="view-settings" class="view">
+    <header class="sub-header">
+        <button class="back-btn" data-target="view-chat">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          Back
+        </button>
+        <h1>Settings</h1>
+    </header>
+    <div class="content-container">
+        <div class="section-title">Chat Gateway</div>
+        <div class="input-group">
+          <label for="gatewayUrl">Gateway URL</label>
+          <input type="text" id="gatewayUrl" placeholder="ws://127.0.0.1:18789">
+          <small class="helper-text">WebSocket address for the chat server.</small>
+        </div>
+        <div class="input-group">
+          <label for="gatewayToken">Auth Token (Optional)</label>
+          <input type="password" id="gatewayToken" placeholder="••••••••">
+          <small class="helper-text">Required only for secured remote gateways.</small>
+        </div>
+        
+        <div class="section-title">Browser Control</div>
+        <div class="input-group">
+          <label for="relayUrl">Relay Service URL</label>
+          <input type="text" id="relayUrl" placeholder="ws://127.0.0.1:18792/extension">
+          <small class="helper-text">Full WebSocket URL for the browser control relay.</small>
+        </div>
+
+        <div class="section-title">Safety</div>
+        <div class="input-group">
+          <label>
+            <input type="checkbox" id="writeAccess">
+            Enable write actions (click/type/navigation)
+          </label>
+          <small class="helper-text">Default is read-only. Keep this off to prevent edits on sensitive pages.</small>
+        </div>
+    
+        <div class="actions">
+          <button id="save-settings" class="btn-primary">Save Changes</button>
+          <button id="reset-settings" class="btn-secondary">Reset to Defaults</button>
+        </div>
+    
+        <div id="settings-status" class="status-msg"></div>
+    </div>
+  </div>
+
+  <!-- VIEW: TUTORIAL -->
+  <div id="view-tutorial" class="view">
+    <header class="sub-header">
+        <button class="back-btn" data-target="view-chat">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          Back
+        </button>
+        <h1>Tutorial</h1>
+    </header>
+    <div class="content-container tutorial-content">
+        <p>Welcome to OpenClaw Copilot! This extension allows you to interact with your browser tabs using OpenClaw, enabling seamless control and assistance.</p>
+    
+        <div class="note" style="margin-top: 0; margin-bottom: 20px;">
+           <strong>All-in-One Solution:</strong> This extension includes full functionality and replaces the standalone "Moltbot Browser Relay". With this extension installed, you can control the browser using this side panel or even from other IM clients. No additional extension is required.
+        </div>
+    
+        <div class="step">
+          <div style="display:flex; align-items:center; margin-bottom:8px;">
+             <span class="step-number">1</span>
+             <span class="step-title">Configure Connection</span>
+          </div>
+          <p>Before using the copilot, you need to connect it to your OpenClaw Gateway.</p>
+          <ul>
+            <li>Click the <strong>Settings</strong> (gear icon) button.</li>
+            <li>Enter your <strong>Gateway URL</strong> (e.g., <code>ws://127.0.0.1:18789</code>).</li>
+            <li>If your gateway requires authentication, enter the <strong>Gateway Token</strong>.</li>
+            <li>Click <strong>Save Changes</strong>.</li>
+          </ul>
+        </div>
+    
+        <div class="step">
+          <div style="display:flex; align-items:center; margin-bottom:8px;">
+             <span class="step-number">2</span>
+             <span class="step-title">Connect to a Tab</span>
+          </div>
+          <p>To let the AI assist you with a specific page:</p>
+          <ul>
+            <li>Navigate to the web page you want to work with.</li>
+            <li>Open the OpenClaw Copilot side panel.</li>
+            <li>Click the <strong>Connect</strong> button.</li>
+            <li>The status icon will turn green (<span style="color: green;">●</span>) when connected.</li>
+          </ul>
+          <div class="note">
+            <strong>Note:</strong> Some pages like <code>chrome://</code> settings pages or the Chrome Web Store are restricted by the browser and cannot be connected.
+          </div>
+        </div>
+    
+        <div class="step">
+          <div style="display:flex; align-items:center; margin-bottom:8px;">
+             <span class="step-number">3</span>
+             <span class="step-title">Chat & Control</span>
+          </div>
+          <p>Once connected, you can:</p>
+          <ul>
+            <li>Ask questions about the page content.</li>
+            <li>Give commands to interact with the page.</li>
+            <li>The AI response will appear in the chat history.</li>
+          </ul>
+        </div>
+    
+        <div class="step">
+           <span class="step-title">Troubleshooting</span>
+           <p>If you see a "Disconnected" status:</p>
+           <ul>
+             <li>Check if your OpenClaw Gateway is running.</li>
+             <li>Verify the URL and Token in Settings.</li>
+             <li>Try clicking the "Connect" button again.</li>
+           </ul>
+        </div>
+    </div>
+  </div>
+
+</body>
+</html>
